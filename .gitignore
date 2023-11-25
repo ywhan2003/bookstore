@@ -1,4 +1,9 @@
 *.db
 .coverage
 /be/__pycache__/*
+/be/model/__pycache__/*
+/be/view/__pycache__/*
 /fe/__pycache__/*
+/fe/access/__pycache__/*
+/fe/bench/__pycache__/*
+/fe/test/__pycache__/*
