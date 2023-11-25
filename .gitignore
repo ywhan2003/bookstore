@@ -1,2 +1,4 @@
 *.db
-/__pycache__/*
+.coverage
+/be/__pycache__/*
+/fe/__pycache__/*
