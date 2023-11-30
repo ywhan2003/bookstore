@@ -6,7 +6,7 @@ import pymysql
 
 class Store:
     # database: str
-
+    conn: pymysql.Connection
     def __init__(self, host, user, password, database):
         # self.database = os.path.join(db_path, "be.db")
         self.host = host
@@ -16,47 +16,57 @@ class Store:
         self.init_tables()
 
     def init_tables(self):
+        self.conn = self.get_db_conn()
+        cursor = self.conn.cursor()
+        sql1 = (
+            'CREATE TABLE user ('
+            'user_id VARCHAR(50) PRIMARY KEY , password VARCHAR(50), '
+            'balance INTEGER, token VARCHAR(50), terminal VARCHAR(50),'
+            'INDEX index_user (user_id))'
+        )
+
+        sql2 = ('CREATE TABLE user_store ('
+                'user_id VARCHAR(50), store_id VARCHAR(50) PRIMARY KEY,'
+                'FOREIGN KEY (user_id) REFERENCES user(user_id),'
+                'INDEX index_store (store_id))'
+                )
+
+        sql3 = ('CREATE TABLE store ('
+                'store_id VARCHAR(50) PRIMARY KEY , book_id VARCHAR(50), price SMALLINT, '
+                'tags VARCHAR(50), author VARCHAR(50),'
+                'content VARCHAR(50), book_intro VARCHAR(50),'
+                'FOREIGN KEY (store_id) REFERENCES user_store(store_id),'
+                'FULLTEXT INDEX index_book(book_id),'
+                'FULLTEXT INDEX index_tags(tags),'
+                'FULLTEXT INDEX index_author(author),'
+                'FULLTEXT INDEX index_content(content),'
+                'FULLTEXT INDEX index_book_intro(book_intro))'
+                )
+
+        sql4 = ('CREATE TABLE new_order ('
+                'order_id VARCHAR(50) PRIMARY KEY , user_id VARCHAR(50), store_id VARCHAR(50), time TIMESTAMP,'
+                'FOREIGN KEY (user_id) REFERENCES user(user_id), '
+                'FOREIGN KEY (store_id) REFERENCES user_store(store_id),'
+                'INDEX index_order (order_id))'
+                )
+
+        sql5 = ('CREATE TABLE order ('
+                'order_id VARCHAR(50) PRIMARY KEY , book_id VARCHAR(50), count SMALLINT, price SMALLINT,'
+                'FOREIGN KEY (order_id) REFERENCES new_order(order_id),'
+                'FOREIGN KEY (book_id) REFERENCES store(book_id)'
+                'INDEX index_order (order_id))'
+                )
         try:
-            conn = self.get_db_conn()
-            cursor = conn.cursor()
-            # cursor.execute(
-            #     "CREATE TABLE IF NOT EXISTS user ("
-            #     "user_id TEXT PRIMARY KEY, password TEXT NOT NULL, "
-            #     "balance INTEGER NOT NULL, token TEXT, terminal TEXT);"
-            # )
-
-            sql = ('CREATE TABLE user ('
-                   'user_id VARCHAR(50), password VARCHAR(50), balance INTEGER, token VARCHAR(50), terminal VARCHAR(50))'
-                   )
-            cursor.execute(sql)
-            # cursor.execute(
-            #     "CREATE TABLE IF NOT EXISTS user_store("
-            #     "user_id TEXT, store_id, PRIMARY KEY(user_id, store_id));"
-            # )
-            #
-            # cursor.execute(
-            #     "CREATE TABLE IF NOT EXISTS store( "
-            #     "store_id TEXT, book_id TEXT, book_info TEXT, stock_level INTEGER,"
-            #     " PRIMARY KEY(store_id, book_id))"
-            # )
-            #
-            # cursor.execute(
-            #     "CREATE TABLE IF NOT EXISTS new_order( "
-            #     "order_id TEXT PRIMARY KEY, user_id TEXT, store_id TEXT)"
-            # )
-            #
-            # cursor.execute(
-            #     "CREATE TABLE IF NOT EXISTS new_order_detail( "
-            #     "order_id TEXT, book_id TEXT, count INTEGER, price INTEGER,  "
-            #     "PRIMARY KEY(order_id, book_id))"
-            # )
-            #
-            # conn.commit()
-        except sqlite.Error as e:
+            cursor.execute(sql1)
+            cursor.execute(sql2)
+            cursor.execute(sql3)
+            cursor.execute(sql4)
+            cursor.execute(sql5)
+        except Exception as e:
             logging.error(e)
-            conn.rollback()
+            self.conn.rollback()
 
-    def get_db_conn(self) -> sqlite.Connection:
+    def get_db_conn(self) -> pymysql.Connection:
         return pymysql.connect(host=self.host, user=self.user, password=self.password, database=self.database)
 
 
