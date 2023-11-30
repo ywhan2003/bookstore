@@ -4,6 +4,7 @@ import logging
 import sqlite3 as sqlite
 from be.model import error
 from be.model import db_conn
+import pymysql
 
 # encode a json string like:
 #   {
@@ -54,33 +55,45 @@ class User(db_conn.DBConn):
             return False
 
     def register(self, user_id: str, password: str):
+        terminal = "terminal_{}".format(str(time.time()))
+        token = jwt_encode(user_id, terminal)
+
+        cursor = self.conn.cursor()
+
+        sql = 'INSERT INTO user(user_id, password, balance, token, terminal) VALUES (%s, %s, %s, %s, %s)'
+
         try:
-            terminal = "terminal_{}".format(str(time.time()))
-            token = jwt_encode(user_id, terminal)
-            self.conn.execute(
-                "INSERT into user(user_id, password, balance, token, terminal) "
-                "VALUES (?, ?, ?, ?, ?);",
-                (user_id, password, 0, token, terminal),
-            )
+            cursor.execute(sql, (user_id, password, 0, token, terminal))
             self.conn.commit()
-        except sqlite.Error:
+        except Exception as e:
+            self.conn.rollback()
             return error.error_exist_user_id(user_id)
+        finally:
+            cursor.close()
         return 200, "ok"
 
     def check_token(self, user_id: str, token: str) -> (int, str):
-        cursor = self.conn.execute("SELECT token from user where user_id=?", (user_id,))
+        cursor = self.conn.cursor()
+
+        sql = 'SELECT token FROM user WHERE user_id = %s;'
+
+        cursor.execute(sql, (user_id,))
         row = cursor.fetchone()
         if row is None:
             return error.error_authorization_fail()
         db_token = row[0]
         if not self.__check_token(user_id, db_token, token):
             return error.error_authorization_fail()
+
+        cursor.close()
         return 200, "ok"
 
     def check_password(self, user_id: str, password: str) -> (int, str):
-        cursor = self.conn.execute(
-            "SELECT password from user where user_id=?", (user_id,)
-        )
+        cursor = self.conn.cursor()
+
+        sql = 'SELECT password FROM user WHERE user_id = %s;'
+
+        cursor.execute(sql, (user_id,))
         row = cursor.fetchone()
         if row is None:
             return error.error_authorization_fail()
@@ -88,27 +101,34 @@ class User(db_conn.DBConn):
         if password != row[0]:
             return error.error_authorization_fail()
 
+        cursor.close()
         return 200, "ok"
 
     def login(self, user_id: str, password: str, terminal: str) -> (int, str, str):
         token = ""
-        try:
-            code, message = self.check_password(user_id, password)
-            if code != 200:
-                return code, message, ""
+        code, message = self.check_password(user_id, password)
+        if code != 200:
+            return code, message, ""
 
-            token = jwt_encode(user_id, terminal)
-            cursor = self.conn.execute(
-                "UPDATE user set token= ? , terminal = ? where user_id = ?",
-                (token, terminal, user_id),
-            )
+        token = jwt_encode(user_id, terminal)
+
+        cursor = self.conn.cursor()
+
+        sql = 'UPDATE user SET token = %s, terminal = %s WHERE user_id = %s;'
+        try:
+
+            cursor.execute(sql, (token, terminal, user_id))
             if cursor.rowcount == 0:
                 return error.error_authorization_fail() + ("",)
             self.conn.commit()
-        except sqlite.Error as e:
+        except Exception as e:
+            self.conn.rollback()
             return 528, "{}".format(str(e)), ""
         except BaseException as e:
             return 530, "{}".format(str(e)), ""
+        finally:
+            cursor.close()
+
         return 200, "ok", token
 
     def logout(self, user_id: str, token: str) -> bool:
@@ -121,7 +141,7 @@ class User(db_conn.DBConn):
             dummy_token = jwt_encode(user_id, terminal)
 
             cursor = self.conn.execute(
-                "UPDATE user SET token = ?, terminal = ? WHERE user_id=?",
+                "UPDATE user SET token = ?, terminal = ? WHERE user_id=?;",
                 (dummy_token, terminal, user_id),
             )
             if cursor.rowcount == 0:

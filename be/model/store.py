@@ -20,23 +20,23 @@ class Store:
         cursor = self.conn.cursor()
         sql1 = (
             'CREATE TABLE user ('
-            'user_id VARCHAR(50) PRIMARY KEY , password VARCHAR(50), '
-            'balance INTEGER, token VARCHAR(50), terminal VARCHAR(50),'
+            'user_id VARCHAR(250) PRIMARY KEY , password VARCHAR(250), '
+            'balance INTEGER, token VARCHAR(250), terminal VARCHAR(250),'
             'INDEX index_user (user_id))'
         )
 
         sql2 = (
             'CREATE TABLE user_store ('
-            'user_id VARCHAR(50), store_id VARCHAR(50) PRIMARY KEY,'
+            'user_id VARCHAR(250), store_id VARCHAR(250) PRIMARY KEY,'
             'FOREIGN KEY (user_id) REFERENCES user(user_id),'
             'INDEX index_store (store_id))'
         )
 
         sql3 = (
             'CREATE TABLE store ('
-            'store_id VARCHAR(50) PRIMARY KEY , book_id VARCHAR(50), title VARCHAR(50), price SMALLINT, '
-            'tags VARCHAR(50), author VARCHAR(50),'
-            'content VARCHAR(50), book_intro VARCHAR(50),'
+            'store_id VARCHAR(250) PRIMARY KEY , book_id VARCHAR(250), title VARCHAR(250), price SMALLINT, '
+            'tags VARCHAR(250), author VARCHAR(250),'
+            'content VARCHAR(250), book_intro VARCHAR(250),'
             'FOREIGN KEY (store_id) REFERENCES user_store(store_id),'
             'INDEX index_store_book (store_id, book_id),' # 加一个复合索引
             'FULLTEXT INDEX index_title(title),'
@@ -48,7 +48,7 @@ class Store:
 
         sql4 = (
             'CREATE TABLE new_order ('
-            'order_id VARCHAR(50) PRIMARY KEY , user_id VARCHAR(50), store_id VARCHAR(50), time TIMESTAMP,'
+            'order_id VARCHAR(250) PRIMARY KEY , user_id VARCHAR(250), store_id VARCHAR(250), time TIMESTAMP,'
             'FOREIGN KEY (user_id) REFERENCES user(user_id), '
             'FOREIGN KEY (store_id) REFERENCES user_store(store_id),'
             'INDEX index_order (order_id))'
@@ -56,7 +56,7 @@ class Store:
 
         sql5 = (
             'CREATE TABLE orders ('
-            'order_id VARCHAR(50) PRIMARY KEY , book_id VARCHAR(50), count SMALLINT, price SMALLINT,'
+            'order_id VARCHAR(250) PRIMARY KEY , book_id VARCHAR(250), count SMALLINT, price SMALLINT,'
             'FOREIGN KEY (order_id) REFERENCES new_order(order_id),'
             'INDEX index_order (order_id))'
         )
