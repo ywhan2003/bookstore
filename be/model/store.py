@@ -25,37 +25,41 @@ class Store:
             'INDEX index_user (user_id))'
         )
 
-        sql2 = ('CREATE TABLE user_store ('
-                'user_id VARCHAR(50), store_id VARCHAR(50) PRIMARY KEY,'
-                'FOREIGN KEY (user_id) REFERENCES user(user_id),'
-                'INDEX index_store (store_id))'
-                )
+        sql2 = (
+            'CREATE TABLE user_store ('
+            'user_id VARCHAR(50), store_id VARCHAR(50) PRIMARY KEY,'
+            'FOREIGN KEY (user_id) REFERENCES user(user_id),'
+            'INDEX index_store (store_id))'
+        )
 
-        sql3 = ('CREATE TABLE store ('
-                'store_id VARCHAR(50) PRIMARY KEY , book_id VARCHAR(50), price SMALLINT, '
-                'tags VARCHAR(50), author VARCHAR(50),'
-                'content VARCHAR(50), book_intro VARCHAR(50),'
-                'FOREIGN KEY (store_id) REFERENCES user_store(store_id),'
-                'FULLTEXT INDEX index_book(book_id),'
-                'FULLTEXT INDEX index_tags(tags),'
-                'FULLTEXT INDEX index_author(author),'
-                'FULLTEXT INDEX index_content(content),'
-                'FULLTEXT INDEX index_book_intro(book_intro))'
-                )
+        sql3 = (
+            'CREATE TABLE store ('
+            'store_id VARCHAR(50) PRIMARY KEY , book_id VARCHAR(50), title VARCHAR(50), price SMALLINT, '
+            'tags VARCHAR(50), author VARCHAR(50),'
+            'content VARCHAR(50), book_intro VARCHAR(50),'
+            'FOREIGN KEY (store_id) REFERENCES user_store(store_id),'
+            'INDEX index_store_book (store_id, book_id),' # 加一个复合索引
+            'FULLTEXT INDEX index_title(title),'
+            'FULLTEXT INDEX index_tags(tags),'
+            'FULLTEXT INDEX index_author(author),'
+            'FULLTEXT INDEX index_content(content),'
+            'FULLTEXT INDEX index_book_intro(book_intro))'
+        )
 
-        sql4 = ('CREATE TABLE new_order ('
-                'order_id VARCHAR(50) PRIMARY KEY , user_id VARCHAR(50), store_id VARCHAR(50), time TIMESTAMP,'
-                'FOREIGN KEY (user_id) REFERENCES user(user_id), '
-                'FOREIGN KEY (store_id) REFERENCES user_store(store_id),'
-                'INDEX index_order (order_id))'
-                )
+        sql4 = (
+            'CREATE TABLE new_order ('
+            'order_id VARCHAR(50) PRIMARY KEY , user_id VARCHAR(50), store_id VARCHAR(50), time TIMESTAMP,'
+            'FOREIGN KEY (user_id) REFERENCES user(user_id), '
+            'FOREIGN KEY (store_id) REFERENCES user_store(store_id),'
+            'INDEX index_order (order_id))'
+        )
 
-        sql5 = ('CREATE TABLE order ('
-                'order_id VARCHAR(50) PRIMARY KEY , book_id VARCHAR(50), count SMALLINT, price SMALLINT,'
-                'FOREIGN KEY (order_id) REFERENCES new_order(order_id),'
-                'FOREIGN KEY (book_id) REFERENCES store(book_id)'
-                'INDEX index_order (order_id))'
-                )
+        sql5 = (
+            'CREATE TABLE orders ('
+            'order_id VARCHAR(50) PRIMARY KEY , book_id VARCHAR(50), count SMALLINT, price SMALLINT,'
+            'FOREIGN KEY (order_id) REFERENCES new_order(order_id),'
+            'INDEX index_order (order_id))'
+        )
         try:
             cursor.execute(sql1)
             cursor.execute(sql2)
@@ -65,6 +69,10 @@ class Store:
         except Exception as e:
             logging.error(e)
             self.conn.rollback()
+        finally:
+            cursor.close()
+            self.conn.close()
+
 
     def get_db_conn(self) -> pymysql.Connection:
         return pymysql.connect(host=self.host, user=self.user, password=self.password, database=self.database)
