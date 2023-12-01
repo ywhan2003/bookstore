@@ -8,7 +8,7 @@ class DBConn:
     def user_id_exist(self, user_id):
         cursor = self.conn.cursor()
 
-        sql = "SELECT user_id FROM user WHERE user_id = %s;"
+        sql = "SELECT * FROM user WHERE user_id = %s;"
         cursor.execute(sql, (user_id,))
         row = cursor.fetchone()
         cursor.close()
@@ -20,7 +20,7 @@ class DBConn:
     def book_id_exist(self, store_id, book_id):
         cursor = self.conn.cursor()
 
-        sql = "SELECT book_id FROM store WHERE store_id = %s AND book_id = %s;"
+        sql = "SELECT * FROM store WHERE store_id = %s AND book_id = %s;"
         cursor.execute(sql, (store_id, book_id))
         row = cursor.fetchone()
         if row is None:
@@ -31,7 +31,7 @@ class DBConn:
     def store_id_exist(self, store_id):
         cursor = self.conn.cursor()
 
-        sql = "SELECT store_id FROM user_store WHERE store_id = %s;"
+        sql = "SELECT * FROM user_store WHERE store_id = %s;"
         cursor.execute(sql, store_id)
         row = cursor.fetchone()
         if row is None:

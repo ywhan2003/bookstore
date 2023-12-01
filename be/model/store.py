@@ -20,23 +20,24 @@ class Store:
         cursor = self.conn.cursor()
         sql1 = (
             'CREATE TABLE user ('
-            'user_id VARCHAR(500) PRIMARY KEY , password VARCHAR(500), '
-            'balance INTEGER, token VARCHAR(500), terminal VARCHAR(500),'
+            'user_id VARCHAR(300) PRIMARY KEY , password VARCHAR(300), '
+            'balance INTEGER, token VARCHAR(300), terminal VARCHAR(300),'
             'INDEX index_user (user_id))'
         )
 
         sql2 = (
             'CREATE TABLE user_store ('
-            'user_id VARCHAR(500), store_id VARCHAR(500) PRIMARY KEY,'
+            'user_id VARCHAR(300), store_id VARCHAR(300) PRIMARY KEY,'
             'FOREIGN KEY (user_id) REFERENCES user(user_id),'
             'INDEX index_store (store_id))'
         )
 
         sql3 = (
             'CREATE TABLE store ('
-            'store_id VARCHAR(300) PRIMARY KEY , book_id VARCHAR(300), title VARCHAR(300), price SMALLINT, '
-            'tags VARCHAR(300), author VARCHAR(300),'
-            'content VARCHAR(300), book_intro VARCHAR(300),'
+            'store_id VARCHAR(300), book_id VARCHAR(300), title VARCHAR(30), price SMALLINT, '
+            'tags VARCHAR(30), author VARCHAR(30),'
+            'content VARCHAR(1000), book_intro VARCHAR(1000),stock_level SMALLINT,'
+            'PRIMARY KEY (store_id, book_id),'
             'FOREIGN KEY (store_id) REFERENCES user_store(store_id),'
             'INDEX index_store_book (store_id, book_id),' # 加一个复合索引
             'FULLTEXT INDEX index_title(title),'
@@ -56,9 +57,10 @@ class Store:
 
         sql5 = (
             'CREATE TABLE orders ('
-            'order_id VARCHAR(300) PRIMARY KEY , book_id VARCHAR(300), count SMALLINT, price SMALLINT,'
+            'order_id VARCHAR(300), book_id VARCHAR(300), count SMALLINT, price SMALLINT,'
             'FOREIGN KEY (order_id) REFERENCES new_order(order_id),'
-            'INDEX index_order (order_id))'
+            'PRIMARY KEY (order_id, book_id), '
+            'INDEX index_order_book (order_id, book_id))'
         )
         try:
             cursor.execute(sql1)
