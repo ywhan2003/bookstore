@@ -1,4 +1,5 @@
 import sqlite3 as sqlite
+from datetime import datetime
 import uuid
 import json
 import logging
@@ -14,59 +15,62 @@ class Buyer(db_conn.DBConn):
         self, user_id: str, store_id: str, id_and_count: [(str, int)]
     ) -> (int, str, str):
         order_id = ""
-        try:
-            if not self.user_id_exist(user_id):
-                return error.error_non_exist_user_id(user_id) + (order_id,)
-            if not self.store_id_exist(store_id):
-                return error.error_non_exist_store_id(store_id) + (order_id,)
-            uid = "{}_{}_{}".format(user_id, store_id, str(uuid.uuid1()))
 
+        cursor = self.conn.cursor()
+
+        if not self.user_id_exist(user_id):
+            return error.error_non_exist_user_id(user_id) + (order_id,)
+        if not self.store_id_exist(store_id):
+            return error.error_non_exist_store_id(store_id) + (order_id,)
+        uid = "{}_{}_{}".format(user_id, store_id, str(uuid.uuid1()))
+
+        sql_get_book = ('SELECT book_id, stock_level, price FROM store '
+                         'WHERE store_id = %s AND book_id = %s')
+
+        sql_update_stock = ('UPDATE store SET stock_level = stock_level - %s '
+                            'WHERE store_id = %s and book_id = %s and stock_level >= %s')
+
+        sql_insert_order = ('INSERT INTO new_order(order_id, user_id, store_id, time, status) '
+                            'VALUES (%s, %s, %s, %s, %s)')
+
+        sql_insert_detail = ('INSERT INTO orders(order_id, book_id, count, price) '
+                             'VALUES (%s, %s, %s, %s)')
+        try:
+
+            cursor.execute(sql_insert_order, (uid, user_id, store_id, datetime.now(), 0))
             for book_id, count in id_and_count:
-                cursor = self.conn.execute(
-                    "SELECT book_id, stock_level, book_info FROM store "
-                    "WHERE store_id = ? AND book_id = ?;",
-                    (store_id, book_id),
-                )
+                cursor.execute(sql_get_book, (store_id, book_id))
+
                 row = cursor.fetchone()
                 if row is None:
+                    self.conn.rollback()
                     return error.error_non_exist_book_id(book_id) + (order_id,)
 
                 stock_level = row[1]
-                book_info = row[2]
-                book_info_json = json.loads(book_info)
-                price = book_info_json.get("price")
+                price = row[2]
 
                 if stock_level < count:
+                    self.conn.rollback()
                     return error.error_stock_level_low(book_id) + (order_id,)
 
-                cursor = self.conn.execute(
-                    "UPDATE store set stock_level = stock_level - ? "
-                    "WHERE store_id = ? and book_id = ? and stock_level >= ?; ",
-                    (count, store_id, book_id, count),
-                )
-                if cursor.rowcount == 0:
-                    return error.error_stock_level_low(book_id) + (order_id,)
+                cursor.execute(sql_update_stock, (count, store_id, book_id, count))
 
-                self.conn.execute(
-                    "INSERT INTO new_order_detail(order_id, book_id, count, price) "
-                    "VALUES(?, ?, ?, ?);",
-                    (uid, book_id, count, price),
-                )
+                cursor.execute(sql_insert_detail, (uid, book_id, count, price))
 
-            self.conn.execute(
-                "INSERT INTO new_order(order_id, store_id, user_id) "
-                "VALUES(?, ?, ?);",
-                (uid, store_id, user_id),
-            )
+
+
             self.conn.commit()
             order_id = uid
-        except sqlite.Error as e:
+        except Exception as e:
+            self.conn.rollback()
             logging.info("528, {}".format(str(e)))
             return 528, "{}".format(str(e)), ""
         except BaseException as e:
+            self.conn.rollback()
             logging.info("530, {}".format(str(e)))
             return 530, "{}".format(str(e)), ""
-
+        finally:
+            cursor.close()
         return 200, "ok", order_id
 
     def payment(self, user_id: str, password: str, order_id: str) -> (int, str):

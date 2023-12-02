@@ -21,7 +21,7 @@ class Store:
         sql1 = (
             'CREATE TABLE user ('
             'user_id VARCHAR(300) PRIMARY KEY , password VARCHAR(300), '
-            'balance INTEGER, token VARCHAR(300), terminal VARCHAR(300),'
+            'balance INTEGER, token VARCHAR(500), terminal VARCHAR(500),'
             'INDEX index_user (user_id))'
         )
 
@@ -34,22 +34,22 @@ class Store:
 
         sql3 = (
             'CREATE TABLE store ('
-            'store_id VARCHAR(300), book_id VARCHAR(300), title VARCHAR(30), price SMALLINT, '
-            'tags VARCHAR(30), author VARCHAR(30),'
-            'content VARCHAR(1000), book_intro VARCHAR(1000),stock_level SMALLINT,'
+            'store_id VARCHAR(300), book_id VARCHAR(300), title VARCHAR(100), price INTEGER, '
+            'tags VARCHAR(100), author VARCHAR(100),'
+            'book_intro VARCHAR(2000),stock_level SMALLINT,'
             'PRIMARY KEY (store_id, book_id),'
             'FOREIGN KEY (store_id) REFERENCES user_store(store_id),'
             'INDEX index_store_book (store_id, book_id),' # 加一个复合索引
             'FULLTEXT INDEX index_title(title),'
             'FULLTEXT INDEX index_tags(tags),'
             'FULLTEXT INDEX index_author(author),'
-            'FULLTEXT INDEX index_content(content),'
             'FULLTEXT INDEX index_book_intro(book_intro))'
         )
 
         sql4 = (
             'CREATE TABLE new_order ('
-            'order_id VARCHAR(300) PRIMARY KEY , user_id VARCHAR(300), store_id VARCHAR(300), time TIMESTAMP,'
+            'order_id VARCHAR(300) PRIMARY KEY , user_id VARCHAR(300), store_id VARCHAR(300), '
+            'time TIMESTAMP, status SMALLINT,'
             'FOREIGN KEY (user_id) REFERENCES user(user_id), '
             'FOREIGN KEY (store_id) REFERENCES user_store(store_id),'
             'INDEX index_order (order_id))'
@@ -57,7 +57,7 @@ class Store:
 
         sql5 = (
             'CREATE TABLE orders ('
-            'order_id VARCHAR(300), book_id VARCHAR(300), count SMALLINT, price SMALLINT,'
+            'order_id VARCHAR(300), book_id VARCHAR(300), count SMALLINT, price INTEGER,'
             'FOREIGN KEY (order_id) REFERENCES new_order(order_id),'
             'PRIMARY KEY (order_id, book_id), '
             'INDEX index_order_book (order_id, book_id))'

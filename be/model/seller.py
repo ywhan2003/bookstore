@@ -27,19 +27,19 @@ class Seller(db_conn.DBConn):
 
         title = book_info_json.get("title")
         tags = book_info_json.get("tags")
-        tags = ",".join(tags)
+        if tags is not None:
+            tags = ",".join(tags)
         author = book_info_json.get("author")
-        content = book_info_json.get("content")
         book_intro = book_info_json.get("book_intro")
         price = book_info_json.get("price")
 
 
         cursor = self.conn.cursor()
 
-        sql = ('INSERT INTO store(store_id, book_id, title, price, tags, author, content, book_intro, stock_level) '
-               'VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)')
+        sql = ('INSERT INTO store(store_id, book_id, title, price, tags, author, book_intro, stock_level) '
+               'VALUES (%s, %s, %s, %s, %s, %s, %s, %s)')
         try:
-            cursor.execute(sql, (store_id, book_id, title, price, tags, author, content, book_intro, stock_level))
+            cursor.execute(sql, (store_id, book_id, title, price, tags, author, book_intro, stock_level))
 
             self.conn.commit()
         except Exception as e:
