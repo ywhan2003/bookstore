@@ -36,7 +36,7 @@ class Store:
             'CREATE TABLE store ('
             'store_id VARCHAR(300), book_id VARCHAR(300), title VARCHAR(100), price INTEGER, '
             'tags VARCHAR(100), author VARCHAR(100),'
-            'book_intro VARCHAR(2000),stock_level SMALLINT,'
+            'book_intro VARCHAR(2000),stock_level INTEGER,'
             'PRIMARY KEY (store_id, book_id),'
             'FOREIGN KEY (store_id) REFERENCES user_store(store_id),'
             'INDEX index_store_book (store_id, book_id),' # 加一个复合索引
@@ -49,7 +49,7 @@ class Store:
         sql4 = (
             'CREATE TABLE new_order ('
             'order_id VARCHAR(300) PRIMARY KEY , user_id VARCHAR(300), store_id VARCHAR(300), '
-            'time TIMESTAMP, status SMALLINT,'
+            'time TIMESTAMP, status INTEGER,'
             'FOREIGN KEY (user_id) REFERENCES user(user_id), '
             'FOREIGN KEY (store_id) REFERENCES user_store(store_id),'
             'INDEX index_order (order_id))'
@@ -57,7 +57,7 @@ class Store:
 
         sql5 = (
             'CREATE TABLE orders ('
-            'order_id VARCHAR(300), book_id VARCHAR(300), count SMALLINT, price INTEGER,'
+            'order_id VARCHAR(300), book_id VARCHAR(300), count INTEGER, price INTEGER,'
             'FOREIGN KEY (order_id) REFERENCES new_order(order_id),'
             'PRIMARY KEY (order_id, book_id), '
             'INDEX index_order_book (order_id, book_id))'

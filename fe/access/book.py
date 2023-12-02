@@ -84,7 +84,7 @@ class BookDB:
                     book.tags.append(tag)
             for i in range(0, random.randint(0, 9)):
                 if picture is not None:
-                    picture = bytes(picture)
+                    picture = bytes(str(picture), encoding='utf-8')
                     encode_str = base64.b64encode(picture).decode("utf-8")
                     book.pictures.append(encode_str)
             books.append(book)
