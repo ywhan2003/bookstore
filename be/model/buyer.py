@@ -74,102 +74,98 @@ class Buyer(db_conn.DBConn):
         return 200, "ok", order_id
 
     def payment(self, user_id: str, password: str, order_id: str) -> (int, str):
-        conn = self.conn
+        cursor = self.conn.cursor()
+
+        sql_get_order_id = 'SELECT user_id, store_id FROM new_order WHERE order_id = %s AND status = %s'
+
+        cursor.execute(sql_get_order_id, (order_id, 0))
+        row = cursor.fetchone()
+        if row is None:
+            return error.error_invalid_order_id(order_id)
+
+        buyer_id = row[0]
+        store_id = row[1]
+
+        sql_get_user = 'SELECT balance, password FROM user WHERE user_id = %s'
+        cursor.execute(sql_get_user, (buyer_id,))
+        row = cursor.fetchone()
+
+        if row is None:
+            return error.error_non_exist_user_id(user_id) + (order_id,)
+
+        balance = row[0]
+
+        if not password == row[1]:
+            return error.error_authorization_fail()
+
+        sql_get_seller = 'SELECT user_id, store_id FROM user_store WHERE store_id = %s'
+        cursor.execute(sql_get_seller, (store_id,))
+        row = cursor.fetchone()
+
+        if row is None:
+            return error.error_non_exist_store_id(store_id) + (order_id,)
+
+        seller_id = row[0]
+        if not self.user_id_exist(seller_id):
+            return error.error_non_exist_user_id(seller_id)
+
+        # 得到orders中所有对应订单的项
+        sql_get_all_orders = 'SELECT count, price FROM orders WHERE order_id = %s'
+
+        # 买家付钱
+        sql_pay = 'UPDATE user SET balance = balance - %s WHERE user_id = %s AND balance >= %s'
+
+        # 卖家收钱
+        sql_get_money = 'UPDATE user SET balance = balance + %s WHERE user_id = %s'
+
+        # 更新订单状态
+        sql_update_status = 'UPDATE new_order SET status = %s WHERE order_id = %s'
+
         try:
-            cursor = conn.execute(
-                "SELECT order_id, user_id, store_id FROM new_order WHERE order_id = ?",
-                (order_id,),
-            )
-            row = cursor.fetchone()
-            if row is None:
-                return error.error_invalid_order_id(order_id)
+            cursor.execute(sql_get_all_orders, (order_id,))
 
-            order_id = row[0]
-            buyer_id = row[1]
-            store_id = row[2]
-
-            if buyer_id != user_id:
-                return error.error_authorization_fail()
-
-            cursor = conn.execute(
-                "SELECT balance, password FROM user WHERE user_id = ?;", (buyer_id,)
-            )
-            row = cursor.fetchone()
-            if row is None:
-                return error.error_non_exist_user_id(buyer_id)
-            balance = row[0]
-            if password != row[1]:
-                return error.error_authorization_fail()
-
-            cursor = conn.execute(
-                "SELECT store_id, user_id FROM user_store WHERE store_id = ?;",
-                (store_id,),
-            )
-            row = cursor.fetchone()
-            if row is None:
-                return error.error_non_exist_store_id(store_id)
-
-            seller_id = row[1]
-
-            if not self.user_id_exist(seller_id):
-                return error.error_non_exist_user_id(seller_id)
-
-            cursor = conn.execute(
-                "SELECT book_id, count, price FROM new_order_detail WHERE order_id = ?;",
-                (order_id,),
-            )
             total_price = 0
             for row in cursor:
-                count = row[1]
-                price = row[2]
+                count = row[0]
+                price = row[1]
                 total_price = total_price + price * count
 
             if balance < total_price:
                 return error.error_not_sufficient_funds(order_id)
 
-            cursor = conn.execute(
-                "UPDATE user set balance = balance - ?"
-                "WHERE user_id = ? AND balance >= ?",
-                (total_price, buyer_id, total_price),
-            )
+            # 买家付钱
+            cursor.execute(sql_pay, (total_price, user_id, total_price))
             if cursor.rowcount == 0:
+                self.conn.rollback()
                 return error.error_not_sufficient_funds(order_id)
 
-            cursor = conn.execute(
-                "UPDATE user set balance = balance + ?" "WHERE user_id = ?",
-                (total_price, buyer_id),
-            )
+            cursor.execute(sql_get_money, (total_price, seller_id))
 
-            if cursor.rowcount == 0:
-                return error.error_non_exist_user_id(buyer_id)
+            # 更新订单状态
+            cursor.execute(sql_update_status, (1, order_id))
 
-            cursor = conn.execute(
-                "DELETE FROM new_order WHERE order_id = ?", (order_id,)
-            )
-            if cursor.rowcount == 0:
-                return error.error_invalid_order_id(order_id)
+            self.conn.commit()
 
-            cursor = conn.execute(
-                "DELETE FROM new_order_detail where order_id = ?", (order_id,)
-            )
-            if cursor.rowcount == 0:
-                return error.error_invalid_order_id(order_id)
-
-            conn.commit()
-
-        except sqlite.Error as e:
+        except Exception as e:
+            self.conn.rollback()
             return 528, "{}".format(str(e))
 
         except BaseException as e:
+            self.conn.rollback()
             return 530, "{}".format(str(e))
-
+        finally:
+            cursor.close()
         return 200, "ok"
 
     def add_funds(self, user_id, password, add_value) -> (int, str):
+        cursor = self.conn.cursor()
+
+        sql_password = 'SELECT password from user where user_id = %s'
+
+        sql_change = 'UPDATE user SET balance = balance + %s WHERE user_id = %s'
         try:
-            cursor = self.conn.execute(
-                "SELECT password  from user where user_id=?", (user_id,)
-            )
+            cursor.execute(sql_password, (user_id,))
+
             row = cursor.fetchone()
             if row is None:
                 return error.error_authorization_fail()
@@ -177,17 +173,19 @@ class Buyer(db_conn.DBConn):
             if row[0] != password:
                 return error.error_authorization_fail()
 
-            cursor = self.conn.execute(
-                "UPDATE user SET balance = balance + ? WHERE user_id = ?",
-                (add_value, user_id),
-            )
+            cursor.execute(sql_change, (add_value, user_id))
+
             if cursor.rowcount == 0:
+                self.conn.rollback()
                 return error.error_non_exist_user_id(user_id)
 
             self.conn.commit()
-        except sqlite.Error as e:
+        except Exception as e:
+            self.conn.rollback()
             return 528, "{}".format(str(e))
         except BaseException as e:
+            self.conn.rollback()
             return 530, "{}".format(str(e))
-
+        finally:
+            cursor.close()
         return 200, "ok"
