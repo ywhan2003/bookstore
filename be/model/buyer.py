@@ -189,3 +189,91 @@ class Buyer(db_conn.DBConn):
         finally:
             cursor.close()
         return 200, "ok"
+
+    def cancel_order(self, user_id, password, order_id) -> (int, str):
+        cursor = self.conn.cursor()
+
+        sql_password = 'SELECT password from user where user_id = %s'
+        sql_get_order = 'SELECT user_id, status from new_order where order_id = %s'
+        sql_update_status = 'UPDATE new_order SET status = %s WHERE order_id = %s'
+
+        cursor.execute(sql_password, (user_id,))
+
+        row = cursor.fetchone()
+        if row is None:
+            return error.error_authorization_fail()
+
+        if row[0] != password:
+            return error.error_authorization_fail()
+
+        cursor.execute(sql_get_order, (order_id,))
+        row = cursor.fetchone()
+        if row is None:
+            return error.error_invalid_order_id(order_id)
+
+        status = row[1]
+
+        if status == -1:
+            return error.error_invalid_order_id(order_id)
+        elif status == 2:
+            return error.error_order_delivered(order_id)
+        elif status == 3:
+            return
+
+        try:
+            cursor.execute(sql_update_status, (-1, order_id))
+
+            self.conn.commit()
+        except Exception as e:
+            self.conn.rollback()
+            return 528, "{}".format(str(e))
+        except BaseException as e:
+            self.conn.rollback()
+            return 530, "{}".format(str(e))
+        finally:
+            cursor.close()
+        return 200, "ok"
+
+    def receive_order(self, user_id, password, order_id) -> (int, str):
+        cursor = self.conn.cursor()
+
+        sql_password = 'SELECT password from user where user_id = %s'
+        sql_get_order = 'SELECT user_id, status from new_order where order_id = %s'
+        sql_update_status = 'UPDATE new_order SET status = %s WHERE order_id = %s'
+
+        cursor.execute(sql_password, (user_id,))
+
+        row = cursor.fetchone()
+        if row is None:
+            return error.error_authorization_fail()
+
+        if row[0] != password:
+            return error.error_authorization_fail()
+
+        cursor.execute(sql_get_order, (order_id,))
+        row = cursor.fetchone()
+        if row is None:
+            return error.error_invalid_order_id(order_id)
+
+        status = row[1]
+
+        if status == -1:
+            return error.error_invalid_order_id(order_id)
+        elif status == 0:
+            return error.error_order_not_paid(order_id)
+        elif status == 1:
+            return error.error_order_not_delivered(order_id)
+
+        try:
+            cursor.execute(sql_update_status, (3, order_id))
+
+            self.conn.commit()
+        except Exception as e:
+            self.conn.rollback()
+            return 528, "{}".format(str(e))
+        except BaseException as e:
+            self.conn.rollback()
+            return 530, "{}".format(str(e))
+        finally:
+            cursor.close()
+        return 200, "ok"
