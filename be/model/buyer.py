@@ -90,9 +90,6 @@ class Buyer(db_conn.DBConn):
         cursor.execute(sql_get_user, (buyer_id,))
         row = cursor.fetchone()
 
-        if row is None:
-            return error.error_non_exist_user_id(user_id) + (order_id,)
-
         balance = row[0]
 
         if not password == row[1]:
@@ -102,12 +99,7 @@ class Buyer(db_conn.DBConn):
         cursor.execute(sql_get_seller, (store_id,))
         row = cursor.fetchone()
 
-        if row is None:
-            return error.error_non_exist_store_id(store_id) + (order_id,)
-
         seller_id = row[0]
-        if not self.user_id_exist(seller_id):
-            return error.error_non_exist_user_id(seller_id)
 
         # 得到orders中所有对应订单的项
         sql_get_all_orders = 'SELECT count, price FROM orders WHERE order_id = %s'

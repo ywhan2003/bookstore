@@ -56,6 +56,13 @@ class TestPayment:
         code = self.buyer.payment(self.order_id)
         assert code != 200
 
+    def test_invalid_user(self):
+        code = self.buyer.add_funds(self.total_price)
+        assert code == 200
+        self.buyer.user_id = self.buyer.user_id + "_x"
+        code = self.buyer.payment(self.order_id)
+        assert code != 200
+
     def test_not_suff_funds(self):
         code = self.buyer.add_funds(self.total_price - 1)
         assert code == 200
