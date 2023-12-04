@@ -160,16 +160,12 @@ class Buyer(db_conn.DBConn):
 
             row = cursor.fetchone()
             if row is None:
-                return error.error_authorization_fail()
+                return error.error_non_exist_user_id(user_id)
 
             if row[0] != password:
                 return error.error_authorization_fail()
 
             cursor.execute(sql_change, (add_value, user_id))
-
-            if cursor.rowcount == 0:
-                self.conn.rollback()
-                return error.error_non_exist_user_id(user_id)
 
             self.conn.commit()
         except Exception as e:
@@ -185,9 +181,13 @@ class Buyer(db_conn.DBConn):
     def cancel_order(self, user_id, password, order_id) -> (int, str):
         cursor = self.conn.cursor()
 
-        sql_password = 'SELECT password from user where user_id = %s'
-        sql_get_order = 'SELECT user_id, status from new_order where order_id = %s'
+        sql_password = 'SELECT password FROM user WHERE user_id = %s'
+        sql_get_order = ('SELECT user_id, status, store_id FROM new_order WHERE order_id = %s')
         sql_update_status = 'UPDATE new_order SET status = %s WHERE order_id = %s'
+        sql_get_books = 'SELECT book_id, count, price FROM orders WHERE order_id = %s'
+        sql_get_seller = 'SELECT user_id FROM user_store WHERE store_id = %s'
+        sql_update_money = 'UPDATE user SET balance = balance + %s WHERE user_id = %s'
+        sql_update_stock = 'UPDATE store SET stock_level = stock_level + %s WHERE store_id = %s AND book_id = %s'
 
         cursor.execute(sql_password, (user_id,))
 
@@ -204,16 +204,36 @@ class Buyer(db_conn.DBConn):
             return error.error_invalid_order_id(order_id)
 
         status = row[1]
+        store_id = row[2]
 
         if status == -1:
             return error.error_invalid_order_id(order_id)
         elif status == 2:
             return error.error_order_delivered(order_id)
         elif status == 3:
-            return
+            return error.error_order_was_received(order_id)
+
+        cursor.execute(sql_get_books, (order_id,))
+        book_info = []
+        row = cursor.fetchall()
+        for each_book in row:
+            tmp = {"book_id": each_book[0], "count": each_book[1], "price": each_book[2]}
+            book_info.append(tmp)
+
+        cursor.execute(sql_get_seller, (store_id,))
+        row = cursor.fetchone()
+        seller_id = row[0]
 
         try:
             cursor.execute(sql_update_status, (-1, order_id))
+
+            total_price = 0
+            for each_book in book_info:
+                cursor.execute(sql_update_stock, (each_book['count'], store_id, each_book['book_id']))
+                total_price += each_book['count'] * each_book['price']
+
+            cursor.execute(sql_update_money, (total_price, user_id))
+            cursor.execute(sql_update_money, (-total_price, seller_id))
 
             self.conn.commit()
         except Exception as e:
