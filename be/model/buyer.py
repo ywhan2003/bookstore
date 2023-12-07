@@ -3,6 +3,9 @@ from datetime import datetime
 import uuid
 import json
 import logging
+
+import pymysql
+
 from be.model import db_conn
 from be.model import error
 
@@ -289,3 +292,61 @@ class Buyer(db_conn.DBConn):
         finally:
             cursor.close()
         return 200, "ok"
+
+    def search_book(self, keywords, method: str = 'title', store_id: str = None):
+        valid_method = ['title', 'tags', 'author', 'book_intro']
+        if method not in valid_method:
+            return error.error_invalid_search_method(method)
+
+        if store_id is not None and not self.store_id_exist(store_id):
+            return error.error_non_exist_store_id(store_id)
+
+        sql_search = 'SELECT book_id FROM store WHERE %s like %s '
+        if store_id is not None:
+            sql_search += 'AND store_id = %s'
+
+        cursor = self.conn.cursor()
+
+        try:
+            if store_id is not None:
+                cursor.execute(sql_search, (method, keywords, store_id))
+            else:
+                cursor.execute(sql_search, (method, keywords))
+        except pymysql.Error as e:
+            self.conn.rollback()
+            return 528, "{}".format(str(e))
+        except BaseException as e:
+            self.conn.rollback()
+            return 530, "{}".format(str(e))
+        finally:
+            cursor.close()
+        return 200, "ok"
+
+    def search_order(self, user_id: str, password: str):
+        cursor = self.conn.cursor()
+        sql_get_user = 'SELECT password FROM user WHERE user_id = %s'
+        cursor.execute(sql_get_user, (user_id,))
+        row = cursor.fetchone()
+
+        if row is None:
+            return error.error_non_exist_user_id(user_id)
+
+        if not password == row[0]:
+            return error.error_authorization_fail()
+
+        sql_get_order = ('SELECT * FROM new_order JOIN orders '
+                         'WHERE new_order.user_id = %s ON new_order.order_id = orders.order_id ')
+        try:
+            cursor.execute(sql_get_order, (user_id,))
+
+            row = cursor.fetchall()
+        except pymysql.Error as e:
+            self.conn.rollback()
+            return 528, "{}".format(str(e))
+        except BaseException as e:
+            self.conn.rollback()
+            return 530, "{}".format(str(e))
+        finally:
+            cursor.close()
+        return 200, "ok"
+

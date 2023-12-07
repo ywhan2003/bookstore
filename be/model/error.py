@@ -13,7 +13,7 @@ error_code = {
     521: "order {} was delivered",
     522: "order {} not delivered",
     523: "order {} was received",
-    524: "",
+    524: "invalid search method {}",
     525: "",
     526: "",
     527: "",
@@ -67,6 +67,9 @@ def error_order_not_delivered(order_id):
 
 def error_order_was_received(order_id):
     return 523, error_code[523].format(order_id)
+
+def error_invalid_search_method(method):
+    return 524, error_code[524].format(method)
 
 def error_authorization_fail():
     return 401, error_code[401]

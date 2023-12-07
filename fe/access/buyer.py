@@ -70,3 +70,25 @@ class Buyer:
         headers = {"token": self.token}
         r = requests.post(url, headers=headers, json=json)
         return r.status_code
+
+    def search_book(self, method: str, keywords: str, store_id: str = None) -> int:
+        json = {
+            "store_id": store_id,
+            "method": method,
+            "keywords": keywords
+        }
+        url = urljoin(self.url_prefix, "search_book")
+        headers = {"token": self.token}
+        r = requests.post(url, headers=headers, json=json)
+        return r.status_code
+
+    def search_order(self, user_id: str, password: str) -> int:
+        json = {
+            "user_id": user_id,
+            "password": password
+        }
+        url = urljoin(self.url_prefix, "search_order")
+        headers = {"token": self.token}
+        r = requests.post(url, headers=headers, json=json)
+        return r.status_code
+
