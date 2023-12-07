@@ -39,8 +39,8 @@ class Buyer(db_conn.DBConn):
         sql_insert_detail = ('INSERT INTO orders(order_id, book_id, count, price) '
                              'VALUES (%s, %s, %s, %s)')
         try:
-
             cursor.execute(sql_insert_order, (uid, user_id, store_id, datetime.now(), 0))
+            cursor.execute("START TRANSACTION")
             for book_id, count in id_and_count:
                 cursor.execute(sql_get_book, (store_id, book_id))
 
@@ -60,11 +60,9 @@ class Buyer(db_conn.DBConn):
 
                 cursor.execute(sql_insert_detail, (uid, book_id, count, price))
 
-
-
             self.conn.commit()
             order_id = uid
-        except Exception as e:
+        except pymysql.Error as e:
             self.conn.rollback()
             logging.info("528, {}".format(str(e)))
             return 528, "{}".format(str(e)), ""
@@ -107,6 +105,7 @@ class Buyer(db_conn.DBConn):
         # 得到orders中所有对应订单的项
         sql_get_all_orders = 'SELECT count, price FROM orders WHERE order_id = %s'
 
+        cursor.execute("START TRANSACTION")
         # 买家付钱
         sql_pay = 'UPDATE user SET balance = balance - %s WHERE user_id = %s AND balance >= %s'
 
@@ -141,7 +140,7 @@ class Buyer(db_conn.DBConn):
 
             self.conn.commit()
 
-        except Exception as e:
+        except pymysql.Error as e:
             self.conn.rollback()
             return 528, "{}".format(str(e))
 
@@ -168,10 +167,11 @@ class Buyer(db_conn.DBConn):
             if row[0] != password:
                 return error.error_authorization_fail()
 
+            cursor.execute("START TRANSACTION")
             cursor.execute(sql_change, (add_value, user_id))
 
             self.conn.commit()
-        except Exception as e:
+        except pymysql.Error as e:
             self.conn.rollback()
             return 528, "{}".format(str(e))
         except BaseException as e:
@@ -228,6 +228,7 @@ class Buyer(db_conn.DBConn):
         seller_id = row[0]
 
         try:
+            cursor.execute("START TRANSACTION")
             cursor.execute(sql_update_status, (-1, order_id))
 
             total_price = 0
@@ -239,7 +240,7 @@ class Buyer(db_conn.DBConn):
             cursor.execute(sql_update_money, (-total_price, seller_id))
 
             self.conn.commit()
-        except Exception as e:
+        except pymysql.Error as e:
             self.conn.rollback()
             return 528, "{}".format(str(e))
         except BaseException as e:
@@ -280,10 +281,11 @@ class Buyer(db_conn.DBConn):
             return error.error_order_not_delivered(order_id)
 
         try:
+            cursor.execute("START TRANSACTION")
             cursor.execute(sql_update_status, (3, order_id))
 
             self.conn.commit()
-        except Exception as e:
+        except pymysql.Error as e:
             self.conn.rollback()
             return 528, "{}".format(str(e))
         except BaseException as e:

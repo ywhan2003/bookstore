@@ -1,5 +1,8 @@
 import json
 import sqlite3 as sqlite
+
+import pymysql
+
 from be.model import error
 from be.model import db_conn
 
@@ -39,10 +42,11 @@ class Seller(db_conn.DBConn):
         sql = ('INSERT INTO store(store_id, book_id, title, price, tags, author, book_intro, stock_level) '
                'VALUES (%s, %s, %s, %s, %s, %s, %s, %s)')
         try:
+            cursor.execute("START TRANSACTION")
             cursor.execute(sql, (store_id, book_id, title, price, tags, author, book_intro, stock_level))
 
             self.conn.commit()
-        except Exception as e:
+        except pymysql.Error as e:
             self.conn.rollback()
             return 528, "{}".format(str(e))
         except BaseException as e:
@@ -65,9 +69,10 @@ class Seller(db_conn.DBConn):
         sql = 'UPDATE store SET stock_level = stock_level + %s WHERE store_id = %s AND book_id = %s'
 
         try:
+            cursor.execute("START TRANSACTION")
             cursor.execute(sql, (add_stock_level, store_id, book_id))
             self.conn.commit()
-        except sqlite.Error as e:
+        except pymysql.Error as e:
             self.conn.rollback()
             return 528, "{}".format(str(e))
         except BaseException as e:
@@ -86,9 +91,10 @@ class Seller(db_conn.DBConn):
 
         sql = 'INSERT INTO user_store(user_id, store_id) VALUES (%s, %s)'
         try:
+            cursor.execute("START TRANSACTION")
             cursor.execute(sql, (user_id, store_id))
             self.conn.commit()
-        except Exception as e:
+        except pymysql.Error as e:
             self.conn.rollback()
             return 528, "{}".format(str(e))
         except BaseException as e:
@@ -119,9 +125,10 @@ class Seller(db_conn.DBConn):
         sql_update_status = 'UPDATE new_order SET status = %s WHERE order_id = %s'
 
         try:
+            cursor.execute("START TRANSACTION")
             cursor.execute(sql_update_status, (2, order_id))
             self.conn.commit()
-        except Exception as e:
+        except pymysql.Error as e:
             self.conn.rollback()
             return 528, "{}".format(str(e))
         except BaseException as e:

@@ -2,6 +2,9 @@ import jwt
 import time
 import logging
 import sqlite3 as sqlite
+
+import pymysql
+
 from be.model import error
 from be.model import db_conn
 
@@ -63,9 +66,10 @@ class User(db_conn.DBConn):
         sql = 'INSERT INTO user(user_id, password, balance, token, terminal) VALUES (%s, %s, %s, %s, %s)'
 
         try:
+            cursor.execute("START TRANSACTION")
             cursor.execute(sql, (user_id, password, 0, token, terminal))
             self.conn.commit()
-        except Exception as e:
+        except pymysql.Error as e:
             self.conn.rollback()
             return error.error_exist_user_id(user_id)
         finally:
@@ -116,12 +120,13 @@ class User(db_conn.DBConn):
 
         sql = 'UPDATE user SET token = %s, terminal = %s WHERE user_id = %s'
         try:
-
+            cursor.execute("START TRANSACTION")
             cursor.execute(sql, (token, terminal, user_id))
             if cursor.rowcount == 0:
+                self.conn.rollback()
                 return error.error_authorization_fail() + ("",)
             self.conn.commit()
-        except Exception as e:
+        except pymysql.Error as e:
             self.conn.rollback()
             return 528, "{}".format(str(e)), ""
         except BaseException as e:
@@ -144,12 +149,14 @@ class User(db_conn.DBConn):
         sql = 'UPDATE user SET token = %s, terminal = %s WHERE user_id = %s'
 
         try:
+            cursor.execute("START TRANSACTION")
             cursor.execute(sql, (token, terminal, user_id))
             if cursor.rowcount == 0:
+                self.conn.rollback()
                 return error.error_authorization_fail()
 
             self.conn.commit()
-        except Exception as e:
+        except pymysql.Error as e:
             self.conn.rollback()
             return 528, "{}".format(str(e))
         except BaseException as e:
@@ -168,12 +175,14 @@ class User(db_conn.DBConn):
 
         sql = 'DELETE FROM user where user_id = %s'
         try:
+            cursor.execute("START TRANSACTION")
             cursor.execute(sql, (user_id,))
             if cursor.rowcount == 1:
                 self.conn.commit()
             else:
+                self.conn.rollback()
                 return error.error_authorization_fail()
-        except sqlite.Error as e:
+        except pymysql.Error as e:
             self.conn.rollback()
             return 528, "{}".format(str(e))
         except BaseException as e:
@@ -193,13 +202,15 @@ class User(db_conn.DBConn):
         cursor = self.conn.cursor()
         sql = 'UPDATE user set password = %s, token = %s, terminal = %s WHERE user_id = %s'
         try:
+            cursor.execute("START TRANSACTION")
             cursor.execute(sql, (new_password, token, terminal, user_id))
 
             if cursor.rowcount == 0:
+                self.conn.rollback()
                 return error.error_authorization_fail()
 
             self.conn.commit()
-        except sqlite.Error as e:
+        except pymysql.Error as e:
             self.conn.rollback()
             return 528, "{}".format(str(e))
         except BaseException as e:
