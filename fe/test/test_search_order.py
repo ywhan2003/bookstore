@@ -40,11 +40,11 @@ class TestPayment:
 
     def test_authorization_error(self):
         self.buyer.password = self.buyer.password + "_x"
-        code = self.buyer.search_order(self.buyer_id, self.password)
+        code = self.buyer.search_order(self.buyer_id, self.buyer.password)
         assert code != 200
 
     def test_invalid_user(self):
-        self.buyer.password = self.buyer.user_id + "_x"
-        code = self.buyer.search_order(self.buyer_id, self.password)
+        self.buyer.user_id = self.buyer.user_id + "_x"
+        code = self.buyer.search_order(self.buyer.user_id, self.buyer.password)
         assert code != 200
 

@@ -334,8 +334,8 @@ class Buyer(db_conn.DBConn):
         if not password == row[0]:
             return error.error_authorization_fail()
 
-        sql_get_order = ('SELECT * FROM new_order JOIN orders '
-                         'WHERE new_order.user_id = %s ON new_order.order_id = orders.order_id ')
+        sql_get_order = ('SELECT * FROM new_order LEFT JOIN orders ON new_order.order_id = orders.order_id '
+                         'WHERE new_order.user_id = %s  ')
         try:
             cursor.execute(sql_get_order, (user_id,))
 
