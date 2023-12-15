@@ -39,8 +39,8 @@ class Buyer(db_conn.DBConn):
         sql_insert_detail = ('INSERT INTO orders(order_id, book_id, count, price) '
                              'VALUES (%s, %s, %s, %s)')
         try:
-            cursor.execute(sql_insert_order, (uid, user_id, store_id, datetime.now(), 0))
             cursor.execute("START TRANSACTION")
+            cursor.execute(sql_insert_order, (uid, user_id, store_id, datetime.now(), 0))
             for book_id, count in id_and_count:
                 cursor.execute(sql_get_book, (store_id, book_id))
 
@@ -209,36 +209,37 @@ class Buyer(db_conn.DBConn):
         status = row[1]
         store_id = row[2]
 
-        if status == -1:
-            return error.error_invalid_order_id(order_id)
-        elif status == 2:
-            return error.error_order_delivered(order_id)
-        elif status == 3:
-            return error.error_order_was_received(order_id)
-
-        cursor.execute(sql_get_books, (order_id,))
-        book_info = []
-        row = cursor.fetchall()
-        for each_book in row:
-            tmp = {"book_id": each_book[0], "count": each_book[1], "price": each_book[2]}
-            book_info.append(tmp)
-
-        cursor.execute(sql_get_seller, (store_id,))
-        row = cursor.fetchone()
-        seller_id = row[0]
-
         try:
             cursor.execute("START TRANSACTION")
-            cursor.execute(sql_update_status, (-1, order_id))
+
+            if status == -1:
+                return error.error_invalid_order_id(order_id)
+            elif status == 2:
+                return error.error_order_delivered(order_id)
+            elif status == 3:
+                return error.error_order_was_received(order_id)
+
+            cursor.execute(sql_get_books, (order_id,))
+            book_info = []
+            row = cursor.fetchall()
+            for each_book in row:
+                tmp = {"book_id": each_book[0], "count": each_book[1], "price": each_book[2]}
+                book_info.append(tmp)
+
+            cursor.execute(sql_get_seller, (store_id,))
+            row = cursor.fetchone()
+            seller_id = row[0]
 
             total_price = 0
             for each_book in book_info:
                 cursor.execute(sql_update_stock, (each_book['count'], store_id, each_book['book_id']))
                 total_price += each_book['count'] * each_book['price']
 
-            cursor.execute(sql_update_money, (total_price, user_id))
-            cursor.execute(sql_update_money, (-total_price, seller_id))
+            if status == 1:
+                cursor.execute(sql_update_money, (total_price, user_id))
+                cursor.execute(sql_update_money, (-total_price, seller_id))
 
+            cursor.execute(sql_update_status, (-1, order_id))
             self.conn.commit()
         except pymysql.Error as e:
             self.conn.rollback()
@@ -295,8 +296,9 @@ class Buyer(db_conn.DBConn):
             cursor.close()
         return 200, "ok"
 
-    def search_book(self, keywords, method: str = 'title', store_id: str = None):
+    def search_book(self, keywords, method: str = 'title', store_id: str = None, skip: int = 0):
         valid_method = ['title', 'tags', 'author', 'book_intro']
+        limit = 20
         if method not in valid_method:
             return error.error_invalid_search_method(method)
 
@@ -307,13 +309,15 @@ class Buyer(db_conn.DBConn):
         if store_id is not None:
             sql_search += 'AND store_id = %s'
 
+        sql_search += ' LIMIT %s, %s'
+
         cursor = self.conn.cursor()
 
         try:
             if store_id is not None:
-                cursor.execute(sql_search, (method, keywords, store_id))
+                cursor.execute(sql_search, (method, keywords, store_id, skip * limit, limit))
             else:
-                cursor.execute(sql_search, (method, keywords))
+                cursor.execute(sql_search, (method, keywords, skip * limit, limit))
         except pymysql.Error as e:
             self.conn.rollback()
             return 528, "{}".format(str(e))

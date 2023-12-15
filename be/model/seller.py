@@ -105,27 +105,29 @@ class Seller(db_conn.DBConn):
 
     def deliver_order(self, order_id: str) -> (int, str):
         cursor = self.conn.cursor()
-        sql_search_order = 'SELECT status FROM new_order WHERE order_id = %s AND status < 3'
-
-        cursor.execute(sql_search_order, (order_id,))
-        row = cursor.fetchone()
-
-        if row is None:
-            return error.error_invalid_order_id(order_id)
-
-        status = row[0]
-
-        if status == -1:
-            return error.error_invalid_order_id(order_id)
-        elif status == 0:
-            return error.error_order_not_paid(order_id)
-        elif status == 2:
-            return error.error_order_delivered(order_id)
-
-        sql_update_status = 'UPDATE new_order SET status = %s WHERE order_id = %s'
 
         try:
             cursor.execute("START TRANSACTION")
+            sql_search_order = 'SELECT status FROM new_order WHERE order_id = %s AND status < 3'
+
+            cursor.execute(sql_search_order, (order_id,))
+            row = cursor.fetchone()
+
+            if row is None:
+                return error.error_invalid_order_id(order_id)
+
+            status = row[0]
+
+            if status == -1:
+                return error.error_invalid_order_id(order_id)
+            elif status == 0:
+                return error.error_order_not_paid(order_id)
+            elif status == 2:
+                return error.error_order_delivered(order_id)
+
+            sql_update_status = 'UPDATE new_order SET status = %s WHERE order_id = %s'
+
+
             cursor.execute(sql_update_status, (2, order_id))
             self.conn.commit()
         except pymysql.Error as e:
