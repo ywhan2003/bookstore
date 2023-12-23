@@ -34,3 +34,7 @@ class TestSearchBook:
         code = self.buyer.search_book("title", "test", self.store_id)
         assert code != 200
 
+    def test_error_method(self):
+        self.store_id = self.store_id + "_x"
+        code = self.buyer.search_book("title_", "test", self.store_id)
+        assert code != 200

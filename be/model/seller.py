@@ -30,8 +30,8 @@ class Seller(db_conn.DBConn):
 
         title = book_info_json.get("title")
         tags = book_info_json.get("tags")
-        if tags is not None:
-            tags = ",".join(tags)
+        # if tags is not None:
+        tags = ",".join(tags)
         author = book_info_json.get("author")
         book_intro = book_info_json.get("book_intro")
         price = book_info_json.get("price")

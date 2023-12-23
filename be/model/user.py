@@ -122,9 +122,9 @@ class User(db_conn.DBConn):
         try:
             cursor.execute("START TRANSACTION")
             cursor.execute(sql, (token, terminal, user_id))
-            if cursor.rowcount == 0:
-                self.conn.rollback()
-                return error.error_authorization_fail() + ("",)
+            # if cursor.rowcount == 0:
+            #     self.conn.rollback()
+            #     return error.error_authorization_fail() + ("",)
             self.conn.commit()
         except pymysql.Error as e:
             self.conn.rollback()
@@ -151,9 +151,9 @@ class User(db_conn.DBConn):
         try:
             cursor.execute("START TRANSACTION")
             cursor.execute(sql, (token, terminal, user_id))
-            if cursor.rowcount == 0:
-                self.conn.rollback()
-                return error.error_authorization_fail()
+            # if cursor.rowcount == 0:
+            #     self.conn.rollback()
+            #     return error.error_authorization_fail()
 
             self.conn.commit()
         except pymysql.Error as e:
@@ -179,9 +179,9 @@ class User(db_conn.DBConn):
             cursor.execute(sql, (user_id,))
             if cursor.rowcount == 1:
                 self.conn.commit()
-            else:
-                self.conn.rollback()
-                return error.error_authorization_fail()
+            # else:
+            #     self.conn.rollback()
+            #     return error.error_authorization_fail()
         except pymysql.Error as e:
             self.conn.rollback()
             return 528, "{}".format(str(e))
@@ -205,9 +205,9 @@ class User(db_conn.DBConn):
             cursor.execute("START TRANSACTION")
             cursor.execute(sql, (new_password, token, terminal, user_id))
 
-            if cursor.rowcount == 0:
-                self.conn.rollback()
-                return error.error_authorization_fail()
+            # if cursor.rowcount == 0:
+            #     self.conn.rollback()
+            #     return error.error_authorization_fail()
 
             self.conn.commit()
         except pymysql.Error as e:
